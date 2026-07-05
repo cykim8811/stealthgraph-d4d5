@@ -233,9 +233,18 @@ class LiveSession:
         if self.seed_root is None or self.seed_root not in self.nodes:
             return {"seed": None, "asof": asof, "nodes": [], "edges": []}
 
-        visited = {self.seed_root}
-        order = [(self.seed_root, 0)]
-        q: deque[tuple[str, int]] = deque([(self.seed_root, 0)])
+        # Multi-root BFS: expand from EVERY analyst-seeded node, not just the
+        # first. A second independent seed (a hash, another handle) and its
+        # cluster would otherwise be unreachable from seed_root → invisible →
+        # unfireable. Any node the analyst explicitly seeded is a root.
+        roots = [self.seed_root]
+        for nid, n in self.nodes.items():
+            if nid != self.seed_root and any("지정" in s for s in n.sources):
+                roots.append(nid)
+
+        visited = set(roots)
+        order = [(r, 0) for r in roots]
+        q: deque[tuple[str, int]] = deque((r, 0) for r in roots)
         reach_edges: set[tuple[str, str]] = set()
 
         while q and len(visited) < MAX_NODES:
