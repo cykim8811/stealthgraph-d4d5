@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "coders": {
+      "type": "http",
+      "url": "https://mcp.coders.kr/mcp"
+    }
+  }
+}

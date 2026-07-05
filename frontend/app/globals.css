@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* STEALTHGRAPH — dark threat-intel investigation console.
+ * A single dark theme (no light mode): deep slate chrome, one violet
+ * accent for "active/same-entity", red reserved for contested links.
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-sans-stack);
+  --font-mono: var(--font-mono-stack);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+:root {
+  --font-sans-stack: var(--font-inter), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono-stack: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular,
+    "SF Mono", Menlo, Consolas, monospace;
+
+  /* console chrome */
+  --background: #0a0c12;
+  --foreground: #e8ecf4;
+  --card: #12151f;
+  --card-foreground: #e8ecf4;
+  --panel: #0e111a;
+  --panel-2: #141824;
+  --primary: #a78bfa; /* violet — active same-entity */
+  --primary-foreground: #0a0c12;
+  --muted: #1a1f2e;
+  --muted-foreground: #8a93a8;
+  --accent: #1a1f2e;
+  --accent-foreground: #e8ecf4;
+  --border: #222838;
+  --border-strong: #303851;
+  --input: #1a1f2e;
+  --ring: #a78bfa;
+
+  --violet: #a78bfa;
+  --violet-soft: #7c5cf0;
+  --danger: #f0556b; /* contested / disproven */
+  --danger-soft: #b23048;
+  --good: #34d399; /* trusted ✓ */
+  --amber: #f5b942;
+
+  /* node-type accents (mirrored in StealthGraph.tsx PALETTE) */
+  --nt-handle: #6ea8fe;
+  --nt-email: #f5a97f;
+  --nt-wallet: #f2cd60;
+  --nt-telegram: #57c7ff;
+  --nt-device: #b48ef2;
+  --nt-pgp: #7ee0a1;
+  --nt-ip: #9aa5b8;
+  --nt-forum: #e084c4;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    font-family: var(--font-sans-stack);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body.sg-root {
+    background: var(--background);
+    color: var(--foreground);
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  code, kbd, pre, samp {
+    font-family: var(--font-mono-stack);
+  }
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+  }
+}
+
+/* thin console scrollbars */
+.sg-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.sg-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sg-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+.sg-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* range slider — violet fill on dark track */
+input[type="range"].sg-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--muted);
+  cursor: pointer;
+}
+input[type="range"].sg-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--violet);
+  border: 2px solid var(--background);
+  box-shadow: 0 0 0 1px var(--violet);
+}
+input[type="range"].sg-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--violet);
+  border: 2px solid var(--background);
+}
+
+kbd.sg-kbd {
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-strong);
+  color: var(--muted-foreground);
+}

@@ -1,0 +1,11 @@
+node_modules
+.next
+__pycache__
+*.pyc
+.venv
+.env
+.env.*
+!.env.example
+.DS_Store
+_probe_tmp/
+.pnpm-store/

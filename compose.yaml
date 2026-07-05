@@ -1,0 +1,88 @@
+# Local dev for template-coders.
+#
+#   docker compose up
+#
+# Brings up:
+#   db        — Postgres 16 on :5432
+#   backend   — FastAPI on :8000, alembic upgrade + reload
+#   frontend  — Next.js dev on :3000 (proxies /api/* to backend)
+#
+# Zero setup: `docker compose up` works on a fresh clone — no .env needed.
+#
+# Identity in dev: there's no platform gate locally, so DEV_FAKE_USER is set
+# to a fixed UUID below and identity.py treats every request as that signed-in
+# user. Override it in backend/.env (copy .env.example) to test as someone else
+# or unset it to exercise the anonymous path. See app/core/identity.py.
+#
+# No redis / no arq — this template has no background jobs. If you add
+# them, mirror template-full's compose for the redis service.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    working_dir: /app
+    command: sh -c "uv sync --frozen && uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    env_file:
+      # Optional — `docker compose up` works zero-setup with the dev defaults
+      # below. Create backend/.env (copy .env.example) only to override them.
+      - path: ./backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@db:5432/app
+      # No platform gate locally → treat every request as this signed-in dev
+      # user (see app/core/identity.py). Override in backend/.env if you want
+      # to test as a different user, or unset to exercise the anonymous path.
+      DEV_FAKE_USER: ${DEV_FAKE_USER:-00000000-0000-0000-0000-000000000001}
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install && pnpm dev"
+    ports:
+      - "3000:3000"
+    environment:
+      # Next.js rewrites this in next.config.ts at request time so it
+      # picks up the in-compose hostname.
+      BACKEND_URL: http://backend:8000
+      # Docker Desktop's bind mount (VirtioFS/gRPC-FUSE on macOS) syncs
+      # file *content* to the container immediately, but doesn't reliably
+      # forward inotify change *events* for host-side edits. The dev
+      # script runs webpack (not Turbopack, which has no polling escape
+      # hatch) specifically so this var takes effect: it makes
+      # webpack's watcher poll mtimes instead of waiting for an event
+      # that may never arrive — without it, edits only show up after a
+      # full `docker compose restart` (which re-reads everything fresh).
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -1,0 +1,76 @@
+# Rendered by `envsubst` at container start (the official nginx image
+# auto-applies templates in /etc/nginx/templates/*.template). Only the
+# variables in NGINX_ENVSUBST_FILTER are substituted — nginx's own
+# $host / $proxy_add_x_forwarded_for etc. stay intact.
+
+# In-cluster DNS resolver (kube-dns), set at boot by the wrapper
+# entrypoint. Pairing this with `set $backend …; proxy_pass $backend;`
+# pushes DNS resolution to *request* time, so nginx doesn't crash at
+# startup just because the api KSvc isn't reachable yet.
+resolver ${NGINX_RESOLVER} valid=30s ipv6=off;
+
+# These have to live at http-context (not inside `server`), because
+# nginx parses the request line + initial headers before it knows which
+# server block to use. Files in /etc/nginx/conf.d/ are already included
+# inside the main http {} block, so writing them at file-top is fine.
+#
+# The CF → Kourier → activator → queue-proxy → gate → nginx chain
+# accumulates X-Forwarded-*, Cookie, X-Coders-User; nginx's defaults
+# (1 × 8k) reject those with 400 "Request Header Or Cookie Too Large".
+client_header_buffer_size 16k;
+large_client_header_buffers 8 32k;
+proxy_buffer_size          32k;
+proxy_buffers              8 32k;
+proxy_busy_buffers_size    64k;
+
+server {
+  listen 80;
+  server_name _;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # /api/* → backend. The trailing slash on `location` is paired with a
+  # variable proxy_pass so nginx forwards $request_uri verbatim.
+  location /api/ {
+    set $backend "${BACKEND_URL}";
+    proxy_pass        $backend;
+    proxy_http_version 1.1;
+    # CRITICAL: send the upstream's own hostname as Host, not the
+    # public name. The K8s Service Knative auto-creates for each KSvc
+    # is an ExternalName pointing at kourier-internal, which routes by
+    # Host header — preserving "tcs.coders.kr" sends the request back
+    # through the public DomainMapping into gate and loops indefinitely
+    # (the gate had to do the same fix in Go). $proxy_host is nginx's
+    # internal name for "the host portion of proxy_pass," which here
+    # resolves to api.proj-<tenant>.svc.cluster.local.
+    proxy_set_header   Host $proxy_host;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    # tcs.coders.kr is the visible host the upstream might want for
+    # building absolute URLs; pass it explicitly under a different name.
+    proxy_set_header   X-Forwarded-Host $host;
+    # Forward the platform gate's identity header straight through.
+    proxy_pass_request_headers on;
+    # Hold the request through a cold-start of the api KSvc (scale-to-zero,
+    # spinning up a fresh pod runs `alembic upgrade head` + uvicorn boot in
+    # ~30-60s the first time). The SPA shows a "Warming up" banner after
+    # 5s so the user knows what's happening; nginx just needs to not 504
+    # before the api can actually answer.
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 90s;
+    proxy_read_timeout 90s;
+  }
+
+  # Static assets get a long browser cache; CF caches them globally too.
+  location /_next/static/ {
+    expires    30d;
+    add_header Cache-Control "public, immutable";
+  }
+
+  # SPA fallback: any unknown path serves the closest matching exported
+  # HTML, defaulting to /index.html so client-side routing can pick up.
+  location / {
+    try_files $uri $uri.html $uri/index.html /index.html;
+  }
+}

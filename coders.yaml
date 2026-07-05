@@ -1,0 +1,48 @@
+# coders.kr multi-service deploy manifest.
+#
+# This template uses `mode: native` — the platform gate validates the
+# visitor's session and stamps the identity as `X-Coders-User` on the
+# way in. The app trusts that header (see backend/app/core/identity.py
+# and frontend/lib/identity.ts) and does NOT implement OAuth itself.
+#
+# Existing apps that already have their own login can deploy with
+# `mode: standalone` instead — see PLATFORM.md in the coders-platform repo.
+#
+# This file is validated against a STRICT schema: only the documented
+# fields are allowed and any unknown key fails the deploy (see PLATFORM.md
+# §9 for the full field list). Don't add fields the platform doesn't
+# define — they won't be ignored, they'll be rejected.
+
+version: "1"
+mode: native
+
+services:
+  web:
+    # Pre-rendered SPA served by nginx: `out/` from `next build` (with
+    # `output: "export"` in next.config.ts) baked into an nginx:alpine
+    # image. Static identical bytes for every visitor → CF caches the
+    # HTML at the edge; identity + data are fetched client-side via
+    # /api/* (nginx proxies those to the backend).
+    dockerfile: frontend/Dockerfile
+    context: frontend
+    port: 80
+    expose: public
+    env:
+      BACKEND_URL: ${api.internal_url}
+
+  api:
+    dockerfile: backend/Dockerfile
+    # `context` is the Docker build context — a Dockerfile can only COPY
+    # files INSIDE it. `backend` is enough here. If a service needs a shared
+    # monorepo package that lives outside its own dir (e.g. backend AND a
+    # daemon both import `packages/protocol`), set `context: .` (repo root)
+    # and have the Dockerfile COPY both `packages/protocol` and `backend/`.
+    # A COPY of a path outside the context is the usual opaque build failure.
+    context: backend
+    port: 8000
+    env:
+      DATABASE_URL: postgresql+asyncpg://${db.user}:${db.password}@${db.host}:${db.port}/${db.name}
+
+  db:
+    type: postgres
+    size: 1Gi
