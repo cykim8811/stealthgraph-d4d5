@@ -393,6 +393,8 @@ const REPLAYS: Record<string, ReplayStep[]> = {
 };
 
 export function StealthGraph() {
+  // first-visit intro: greet with the real-case scenario and offer to run it
+  const [introOpen, setIntroOpen] = useState(true);
   const me = useMe();
   const [mode, setMode] = useState<Mode>("demo");
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -916,6 +918,16 @@ export function StealthGraph() {
 
   return (
     <div className="flex h-screen flex-col">
+      {introOpen && (
+        <IntroModal
+          onRun={() => {
+            setIntroOpen(false);
+            const q = QUESTS.find((x) => x.id === "broker-tox");
+            if (q) runReplay(q);
+          }}
+          onClose={() => setIntroOpen(false)}
+        />
+      )}
       <TopBar
         me={me}
         mode={mode}
@@ -1456,6 +1468,66 @@ function ExplorePanel({
       >
         이 시드의 신뢰 초기화
       </button>
+    </div>
+  );
+}
+
+// First-visit intro: frames the real case, then launches the recorded
+// simulation of solving it with this system.
+function IntroModal({ onRun, onClose }: { onRun: () => void; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(6,8,13,0.72)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[520px] rounded-2xl border p-7 shadow-2xl"
+        style={{ background: "var(--panel)", borderColor: "var(--border-strong)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="inline-block rounded-full px-2.5 py-1 text-[10.5px] font-semibold tracking-wide"
+          style={{ background: "var(--muted)", color: "var(--violet)" }}
+        >
+          실데이터 · 텔레그램 · Indonesia
+        </div>
+        <h2 className="mt-3 text-[22px] font-bold" style={{ color: "var(--foreground)" }}>
+          가면 뒤의 브로커
+        </h2>
+
+        <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+          <b style={{ color: "var(--foreground)" }}>실제 있었던 사건.</b> 인도네시아 정부·통신의
+          대량 개인정보(통신 3천5백만·SIM등록 13억·선거인단 1억·건강보험 등)를 텔레그램에서
+          판매한 데이터 브로커가 있었다. 이들은 핸들·계정을 끊임없이 갈아치우며 추적을 피했다.
+        </p>
+        <p className="mt-2.5 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+          이 시스템으로 <b style={{ color: "var(--foreground)" }}>흩어진 식별자를 단일 행위자로
+          해소</b>하는 과정을 — 실제 StealthMole 라이브 데이터로 — 재생합니다.
+          핸들은 지워도 못 바꾸는 <b style={{ color: "var(--violet)" }}>연락처(TOX)</b> 하나로
+          계정 11개를 잇고, 유포망·정체교체를 관통하고, 이름만 겹치는 링크는 문체로 반증합니다.
+        </p>
+
+        <div className="mt-5 flex items-center gap-2.5">
+          <button
+            onClick={onRun}
+            className="flex-1 rounded-lg py-2.5 text-[13px] font-semibold"
+            style={{ background: "var(--violet)", color: "var(--primary-foreground)" }}
+          >
+            ▶ 시뮬레이션 실행
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-lg px-4 py-2.5 text-[13px] font-medium"
+            style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
+          >
+            그냥 둘러보기
+          </button>
+        </div>
+        <p className="mt-3 text-[10.5px]" style={{ color: "var(--muted-foreground)" }}>
+          재생은 실제 라이브 조회를 수행합니다(공용 데모 쿼터 소량 사용).
+        </p>
+      </div>
     </div>
   );
 }
