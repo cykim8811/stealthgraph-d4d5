@@ -148,8 +148,14 @@ type Quest = {
   tagline: string;
   briefing: string;
   seed: string;
-  objectives: { id: string; label: string; done: (c: QuestCtx) => boolean }[];
+  objectives: { id: string; label: string; labelEn?: string; done: (c: QuestCtx) => boolean }[];
   resolved: string;
+  // optional English copy — only the flagship shadow-broker mission fills these;
+  // other quests leave them absent and fall back to Korean under the KO/EN toggle.
+  titleEn?: string;
+  taglineEn?: string;
+  briefingEn?: string;
+  resolvedEn?: string;
   // offline missions run on canned fixtures through the real fusion engine —
   // no StealthMole connectivity required, so their buttons aren't gated on
   // `configured` (the live key being up).
@@ -174,27 +180,43 @@ const QUESTS: Quest[] = [
     id: "shadow-broker",
     tag: "재구성 · 방산 초기접근 · 오프라인",
     title: "브로커의 그림자",
+    titleEn: "Shadow of the Broker",
     tagline: "버너 핸들 · 미끼 크리덴셜 · 사칭 채널 — 진짜 판매자는 누구인가?",
+    taglineEn: "Burner handle · decoy credentials · impersonation channel — who is the real seller?",
     briefing:
       "가상 방산 협력사(hanul-defense)의 Citrix·VPN 접근권을 파는 초기접근 브로커(IAB). " +
       "가장 더러운 케이스다 — 핸들은 버너, 서포트 계정은 소모품, 판매글엔 미끼 크리덴셜과 " +
       "사칭 채널까지 섞여 있다. 안 바뀌는 TOX 연락키로 계정을 결속하고, CB 재사용폭으로 " +
       "'널리 거래된 미끼'를 걷어내고, 희소 앵커로 2번째 기기·실명까지 잇고, 이름만 겹치는 " +
       "사칭 채널은 문체로 반증하라. (실 연결 없이 재구성 데이터로 동작)",
+    briefingEn:
+      "An Initial-Access Broker (IAB) selling Citrix/VPN access to a fabricated defense " +
+      "contractor (hanul-defense). The dirtiest case there is — the handle is a burner, the " +
+      "support accounts are disposable, and the listing is seeded with decoy credentials and an " +
+      "impersonation channel. Bind the account cluster with the immutable TOX contact key, use " +
+      "CB reuse-breadth to strip out the 'widely-traded decoy,' bridge to a 2nd device and a real " +
+      "name via a rare anchor, and refute the name-only impersonation channel with stylometry. " +
+      "(Runs on reconstructed data through the real engine — no live connectivity required.)",
     seed: "handle:apt_broker",
     offline: true,
     objectives: [
-      { id: "infil", label: "침투 — 버너 핸들 시드 (handle:apt_broker)", done: (c) => c.nodes.some((n) => n.type === "handle") },
-      { id: "anchor", label: "결속 — TT로 TOX 앵커 확보(계정 클러스터 점등)", done: (c) => c.nodes.some((n) => n.type === "tox") },
-      { id: "trap", label: "함정 판별 — CB 재사용폭으로 거래재고(미끼) 적발", done: tradedFound },
-      { id: "bridge", label: "브리지 — 희소 앵커로 2번째 감염기기 도달", done: (c) => ipCount(c) >= 2 },
-      { id: "refute", label: "반증 — 사칭 채널에 🔬 문체 비교 실행", done: (c) => c.fireLog.some((f) => f.kind === "compared") },
-      { id: "resolve", label: "해소 — 실체 5개 이상 신뢰 귀속", done: (c) => c.trustedCount >= 5 },
+      { id: "infil", label: "침투 — 버너 핸들 시드 (handle:apt_broker)", labelEn: "Infiltrate — seed the burner handle (handle:apt_broker)", done: (c) => c.nodes.some((n) => n.type === "handle") },
+      { id: "anchor", label: "결속 — TT로 TOX 앵커 확보(계정 클러스터 점등)", labelEn: "Bind — fire TT to secure the TOX anchor (light up the account cluster)", done: (c) => c.nodes.some((n) => n.type === "tox") },
+      { id: "trap", label: "함정 판별 — CB 재사용폭으로 거래재고(미끼) 적발", labelEn: "Spot the trap — expose traded inventory (decoy) via CB reuse-breadth", done: tradedFound },
+      { id: "bridge", label: "브리지 — 희소 앵커로 2번째 감염기기 도달", labelEn: "Bridge — reach a 2nd infected device via the rare anchor", done: (c) => ipCount(c) >= 2 },
+      { id: "refute", label: "반증 — 사칭 채널에 🔬 문체 비교 실행", labelEn: "Refute — run a 🔬 stylometry compare on the impersonation channel", done: (c) => c.fireLog.some((f) => f.kind === "compared") },
+      { id: "resolve", label: "해소 — 실체 5개 이상 신뢰 귀속", labelEn: "Resolve — attribute 5+ entities into the hypothesis", done: (c) => c.trustedCount >= 5 },
     ],
     resolved:
       "해소 완료 — 버너 핸들·소모품 계정으로 표면은 막혔지만, 안 바뀌는 TOX가 채널을 단일 운영으로 결속. " +
       "미끼(svc-vpn, CB 9,300 거래재고)는 재사용폭으로 붕괴, 희소 앵커(CB=1)가 2번째 기기·실명 Dmytro Kovalenko로 관통. " +
       "이름만 빌린 KRAKEN-TEAM(핵티비즘 문체)은 stylometry로 반증. 방산 협력사 접근권 판매자를 실체로 확정(조치).",
+    resolvedEn:
+      "Resolution complete — the burner handle and disposable accounts sealed the surface, but the " +
+      "immutable TOX bound the channels into a single operation. The decoy (svc-vpn, CB 9,300 traded " +
+      "inventory) collapsed under reuse-breadth, while the rare anchor (CB=1) drove through to a 2nd " +
+      "device and the real name Dmytro Kovalenko. The name-borrowing KRAKEN-TEAM (hacktivist stylometry) " +
+      "was refuted by stylometry. The defense-contractor access seller is confirmed as a single entity (actioned).",
   },
   {
     id: "ghost-trader",
@@ -334,29 +356,40 @@ type ReplayAction =
   | { kind: "fire"; module: string; target: string } // target = node label
   | { kind: "compare"; a: string; b: string } // a, b = node labels (문체 비교)
   | { kind: "trust"; targets: string[] }
+  | { kind: "adopt"; targets: string[] } // targets = node labels; select each + simulate Space to add to hypothesis
   | { kind: "note" };
-type ReplayStep = { move: string; narrate: string; action: ReplayAction };
+// moveEn/narrateEn: optional English copy (KO⇄EN toggle, shadow-broker only)
+type ReplayStep = { move: string; narrate: string; action: ReplayAction; moveEn?: string; narrateEn?: string };
 
 const REPLAYS: Record<string, ReplayStep[]> = {
   "shadow-broker": [
     { move: "진입 · 버너 핸들", narrate: "제보: 방산 협력사 hanul-defense의 Citrix·VPN 접근권이 포럼에서 팔린다. 판매자 핸들 @apt_broker 하나뿐 — 버너라 단독으론 벽. 그래도 여기서 시작한다.",
+      moveEn: "Entry · burner handle", narrateEn: "Tip-off: Citrix/VPN access to the defense contractor hanul-defense is being sold on a forum. Only one seller handle, @apt_broker — a burner, so a dead end on its own. We start here anyway.",
       action: { kind: "seed", query: "handle:apt_broker" } },
     { move: "결속 · TT/TOX", narrate: "TT로 이 핸들을 훑자 운영이 드러난다 — 안 바뀌는 연락키 TOX가 본 채널·소모품 서포트 계정을 tox_reuse(0.9·저위조)로 결속. 판매글의 '접근 증명' 파일해시와 타겟 도메인도 함께 걸린다.",
+      moveEn: "Bind · TT/TOX", narrateEn: "Sweeping the handle with TT exposes the operation — the immutable contact key TOX binds the main channel and disposable support accounts via tox_reuse (0.9 · low-forgeability). The listing's 'proof-of-access' file hash and the target domain surface alongside.",
       action: { kind: "fire", module: "tt", target: "apt_broker" } },
     { move: "압수 · CDS", narrate: "판매 연락 이메일을 CDS로 되짚으니 감염된 워크스테이션(45.130.88.207)이 통째로 나온다. 그 브라우저에 저장돼 있던 로그인 다수 — 이 중 누가 그의 '신원'이고 누가 그냥 재고인가?",
+      moveEn: "Seize · CDS", narrateEn: "Pivoting the sales-contact email through CDS pulls up an entire infected workstation (45.130.88.207). Dozens of logins were stored in that browser — which of these is his 'identity' and which is just inventory?",
       action: { kind: "fire", module: "cds", target: "kraken.access@onionmail.org" } },
     { move: "함정 · CB(미끼)", narrate: "먼저 눈에 띄는 svc-vpn 계정을 검증. CB=9,300 — 콤보리스트에 도배된 거래 재고다. 수많은 무관한 기기가 똑같이 가진 크리덴셜. 재사용폭 할인으로 이 엣지는 0.9→0.25로 붕괴. 공범처럼 보였지만 미끼.",
+      moveEn: "Trap · CB (decoy)", narrateEn: "First, verify the eye-catching svc-vpn account. CB=9,300 — traded inventory plastered across combolists. A credential that countless unrelated devices hold identically. The reuse-breadth discount collapses this edge from 0.9 to 0.25. It looked like an accomplice, but it's a decoy.",
       action: { kind: "fire", module: "cb", target: "svc-vpn@hanul-defense.io" } },
     { move: "앵커 · CB(희소)", narrate: "대조 검증. 밋밋한 개인 이메일 d.kovalenko88은 CB=1 — 사실상 유일, 어디에도 안 팔린다. 할인 없음. 이게 그를 유일하게 가리키는 진짜 앵커다.",
+      moveEn: "Anchor · CB (rare)", narrateEn: "Contrast check. The plain personal email d.kovalenko88 is CB=1 — effectively unique, sold nowhere. No discount. This is the true anchor that points uniquely to him.",
       action: { kind: "fire", module: "cb", target: "d.kovalenko88@protonmail.com" } },
     { move: "브리지 · 실명", narrate: "그 희소 앵커를 CDS로 되짚으니 2번째 감염 기기(개인 노트북 188.72.14.33)로 이어지고, 거기 실명 지메일 dmytro.kovalenko@gmail.com이 있다. 버너 뒤의 실체 — Dmytro Kovalenko.",
+      moveEn: "Bridge · real name", narrateEn: "Pivoting that rare anchor through CDS leads to a 2nd infected device (personal laptop 188.72.14.33), where a real-name Gmail dmytro.kovalenko@gmail.com sits. The entity behind the burner — Dmytro Kovalenko.",
       action: { kind: "fire", module: "cds", target: "d.kovalenko88@protonmail.com" } },
     { move: "사칭 의심", narrate: "운영자 본 채널을 TT로 되짚어 이걸 사칭·인용하는 계정을 훑는다. 'KRAKEN-TEAM'이 이름 하나로(co_mention·위조 쉬움) 걸린다. 같은 팀? 이름만 빌린 것? 표시이름으로 결속하는 건 성급하다.",
+      moveEn: "Impersonation suspect", narrateEn: "Pivoting the operator's main channel back through TT sweeps up accounts that impersonate or cite it. 'KRAKEN-TEAM' catches on a single name (co_mention · easily forged). Same team? Or just borrowing the name? Binding on a display name would be premature.",
       action: { kind: "fire", module: "tt", target: "7742119003" } },
     { move: "반증 · 문체", narrate: "본 채널 vs KRAKEN-TEAM 문체를 🔬 비교. 상업 대량판매(FILE INFORMATION·VIP·Tox ID) vs 웹디페이스 핵티비즘(#OpIsrael·Hacked by·Ganosec) — 완전히 다르다. stylometry raw 0.14 → 링크 붕괴(0.32→0.15). 이름 차용으로 확정, 반증.",
+      moveEn: "Refute · stylometry", narrateEn: "Compare the main channel vs KRAKEN-TEAM writing style with 🔬. Commercial bulk-sales (FILE INFORMATION · VIP · Tox ID) vs web-defacement hacktivism (#OpIsrael · Hacked by · Ganosec) — completely different. Stylometry raw 0.14 → the link collapses (0.32→0.15). Confirmed as name-borrowing, refuted.",
       action: { kind: "compare", a: "7742119003", b: "KRAKEN_TEAM" } },
-    { move: "해소", narrate: "결론 — 버너·소모품 계정으로 표면은 막혔지만, TOX가 운영을 결속하고, 미끼는 재사용폭으로 걷어냈고, 희소 앵커가 2번째 기기·실명 Dmytro Kovalenko로 관통했다. 사칭 채널은 반증. 방산 접근권 판매자를 실체로 귀속(조치).",
-      action: { kind: "trust", targets: ["apt_broker", "992BBBCBDBE33F42E4E5951ACA0A211114BEE0A47708B39341A8B1F523AAEAB2DBC4579AE2B3", "7742119003", "7742119888", "7742120044", "kraken.access@onionmail.org", "45.130.88.207", "d.kovalenko88@protonmail.com", "188.72.14.33", "dmytro.kovalenko@gmail.com"] } },
+    { move: "해소", narrate: "각 실체 노드를 선택하고 **Space**로 가설 A에 편입한다 — 미끼·사칭은 제외. 버너 뒤의 실체가 단일 가설로 확정된다.",
+      moveEn: "Resolve", narrateEn: "Select each entity node and press **Space** to adopt it into Hypothesis A — decoy and impersonator excluded. The entity behind the burner is confirmed as a single hypothesis.",
+      action: { kind: "adopt", targets: ["apt_broker", "992BBBCBDBE33F42E4E5951ACA0A211114BEE0A47708B39341A8B1F523AAEAB2DBC4579AE2B3", "7742119003", "7742119888", "7742120044", "kraken.access@onionmail.org", "45.130.88.207", "d.kovalenko88@protonmail.com", "188.72.14.33", "dmytro.kovalenko@gmail.com"] } },
   ],
   "broker-tox": [
     { move: "진입 · TOX", narrate: "핸들 @lockbituser는 삭제됐고 서포트 계정은 전부 소모품(burner). 개인 식별자로는 벽. 하지만 손님이 연락할 TOX 키는 못 바꾼다 — 그 하나를 시드로.",
@@ -641,9 +674,13 @@ export function StealthGraph() {
 
   // ---- recorded replay engine ----
   const [replay, setReplay] = useState<
-    { questId: string; step: number; total: number; move: string; narrate: string } | null
+    { questId: string; step: number; total: number; move: string; narrate: string; moveEn?: string; narrateEn?: string } | null
   >(null);
   const stopReplay = useRef(false);
+  // pulses the "press Space to add to hypothesis" keycap during the adopt step
+  const [spacePulse, setSpacePulse] = useState(false);
+  // KO/EN toggle — scoped to the shadow-broker mission (others fall back to KO)
+  const [lang, setLang] = useState<"ko" | "en">("ko");
 
   // Trust a set of nodes (by label) under a given seed — functional setState
   // so it's safe to call from the async replay loop without stale `seed`.
@@ -695,7 +732,7 @@ export function StealthGraph() {
       for (let i = 0; i < steps.length; i++) {
         if (stopReplay.current) break;
         const s = steps[i];
-        setReplay({ questId: quest.id, step: i, total: steps.length, move: s.move, narrate: s.narrate });
+        setReplay({ questId: quest.id, step: i, total: steps.length, move: s.move, narrate: s.narrate, moveEn: s.moveEn, narrateEn: s.narrateEn });
         const a = s.action;
         try {
           if (a.kind === "seed") {
@@ -725,13 +762,28 @@ export function StealthGraph() {
             }
           } else if (a.kind === "trust" && state.seed) {
             trustNodesFor(state.seed, a.targets, state.nodes);
+          } else if (a.kind === "adopt" && state.seed) {
+            // demonstrate the real UX: select each entity node and "press Space"
+            // to add it to the hypothesis one-by-one. Use trustNodesFor (functional
+            // setState) NOT toggleTrust (closes over stale trust/seed) inside the loop.
+            for (const label of a.targets) {
+              const node = state.nodes.find((n) => n.label === label);
+              if (!node) continue;
+              setSelectedId(node.id);
+              setSpacePulse(true);
+              await new Promise((r) => setTimeout(r, 480));
+              trustNodesFor(state.seed, [label], state.nodes);
+              setSpacePulse(false);
+              await new Promise((r) => setTimeout(r, 320));
+              if (stopReplay.current) break;
+            }
           }
         } catch (e) {
           setLiveError(e instanceof Error ? e.message : String(e));
           setLiveBusy(false);
         }
         if (stopReplay.current) break;
-        await new Promise((r) => setTimeout(r, a.kind === "fire" || a.kind === "compare" ? 3000 : 2300));
+        await new Promise((r) => setTimeout(r, a.kind === "fire" || a.kind === "compare" ? 3000 : a.kind === "adopt" ? 500 : 2300));
       }
       if (!stopReplay.current) await new Promise((r) => setTimeout(r, 600));
       setReplay(null);
@@ -742,6 +794,7 @@ export function StealthGraph() {
   const stopReplayNow = useCallback(() => {
     stopReplay.current = true;
     setReplay(null);
+    setSpacePulse(false);
   }, []);
 
   // reopen a saved case: rehydrate the server session, then pull it into view
@@ -970,6 +1023,8 @@ export function StealthGraph() {
     <div className="flex h-screen flex-col">
       {introOpen && (
         <IntroModal
+          lang={lang}
+          onLang={setLang}
           onRun={() => {
             setIntroOpen(false);
             const q = QUESTS.find((x) => x.id === "shadow-broker");
@@ -1052,6 +1107,7 @@ export function StealthGraph() {
               ctx={questCtx}
               configured={liveMeta?.configured ?? false}
               busy={liveBusy}
+              lang={lang}
               onStart={startQuest}
               onStop={() => setActiveQuestId(null)}
               onReplay={runReplay}
@@ -1086,10 +1142,20 @@ export function StealthGraph() {
               <QuestTracker
                 quest={activeQuest}
                 ctx={questCtx}
+                lang={lang}
                 onClose={() => setActiveQuestId(null)}
               />
             )}
-            {replay && <ReplayBar replay={replay} onStop={stopReplayNow} />}
+            {spacePulse && (
+              <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 z-20">
+                <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5 shadow-lg animate-pulse"
+                     style={{ background: "rgba(14,17,26,0.92)", borderColor: "var(--violet)" }}>
+                  <kbd className="sg-kbd">Space</kbd>
+                  <span className="text-[11px]" style={{ color: "var(--violet)" }}>가설에 추가 · add to hypothesis</span>
+                </div>
+              </div>
+            )}
+            {replay && <ReplayBar replay={replay} lang={lang} onLang={setLang} onStop={stopReplayNow} />}
           </div>
           {mode === "demo" && asof != null && (
             <Timeline time={meta.time} asof={asof} onAsof={setAsof} />
@@ -1525,7 +1591,33 @@ function ExplorePanel({
 
 // First-visit intro: frames the real case, then launches the recorded
 // simulation of solving it with this system.
-function IntroModal({ onRun, onClose }: { onRun: () => void; onClose: () => void }) {
+// compact KO/EN switch — reused in the intro modal and the replay bar
+function LangToggle({ lang, onLang }: { lang: "ko" | "en"; onLang: (l: "ko" | "en") => void }) {
+  return (
+    <div
+      className="inline-flex overflow-hidden rounded-md border text-[10px] font-semibold"
+      style={{ borderColor: "var(--border-strong)" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {(["ko", "en"] as const).map((l) => (
+        <button
+          key={l}
+          onClick={() => onLang(l)}
+          className="px-2 py-0.5 uppercase tracking-wide transition-colors"
+          style={{
+            background: lang === l ? "var(--violet)" : "var(--muted)",
+            color: lang === l ? "var(--primary-foreground)" : "var(--muted-foreground)",
+          }}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function IntroModal({ lang, onLang, onRun, onClose }: { lang: "ko" | "en"; onLang: (l: "ko" | "en") => void; onRun: () => void; onClose: () => void }) {
+  const en = lang === "en";
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -1537,29 +1629,54 @@ function IntroModal({ onRun, onClose }: { onRun: () => void; onClose: () => void
         style={{ background: "var(--panel)", borderColor: "var(--border-strong)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="inline-block rounded-full px-2.5 py-1 text-[10.5px] font-semibold tracking-wide"
-          style={{ background: "var(--muted)", color: "var(--violet)" }}
-        >
-          재구성 · 방산 초기접근 · 오프라인
+        <div className="flex items-start justify-between gap-2">
+          <div
+            className="inline-block rounded-full px-2.5 py-1 text-[10.5px] font-semibold tracking-wide"
+            style={{ background: "var(--muted)", color: "var(--violet)" }}
+          >
+            {en ? "Reconstruction · Defense Initial-Access · Offline" : "재구성 · 방산 초기접근 · 오프라인"}
+          </div>
+          <LangToggle lang={lang} onLang={onLang} />
         </div>
         <h2 className="mt-3 text-[22px] font-bold" style={{ color: "var(--foreground)" }}>
-          브로커의 그림자
+          {en ? "Shadow of the Broker" : "브로커의 그림자"}
         </h2>
 
-        <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-          <b style={{ color: "var(--foreground)" }}>방산 협력사 접근권이 팔린다.</b> 어느 포럼에
-          가상 협력사 hanul-defense의 Citrix·VPN 접근권을 파는 초기접근 브로커(IAB)가 있다.
-          판매자 핸들은 버너, 서포트 계정은 소모품, 판매글엔 <b style={{ color: "var(--foreground)" }}>미끼
-          크리덴셜과 사칭 채널</b>까지 섞여 있다 — 가장 더럽고 어려운 케이스다.
-        </p>
-        <p className="mt-2.5 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-          이 시스템으로 <b style={{ color: "var(--foreground)" }}>흩어진 식별자를 단일 행위자로
-          해소</b>하는 과정을 재생합니다. 안 바뀌는 <b style={{ color: "var(--violet)" }}>연락처(TOX)</b>로
-          계정을 결속하고, <b style={{ color: "var(--violet)" }}>재사용폭</b>으로 미끼를 걷어내고,
-          희소 앵커로 2번째 기기·<b style={{ color: "var(--foreground)" }}>실명</b>까지 잇고, 이름만
-          겹치는 사칭 채널은 <b style={{ color: "var(--violet)" }}>문체</b>로 반증합니다.
-        </p>
+        {en ? (
+          <>
+            <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+              <b style={{ color: "var(--foreground)" }}>Defense-contractor access is for sale.</b> On a
+              forum, an Initial-Access Broker (IAB) is selling Citrix/VPN access to the fabricated
+              contractor hanul-defense. The seller handle is a burner, the support accounts are
+              disposable, and the listing is laced with <b style={{ color: "var(--foreground)" }}>decoy
+              credentials and an impersonation channel</b> — the dirtiest, hardest case there is.
+            </p>
+            <p className="mt-2.5 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+              This system replays how <b style={{ color: "var(--foreground)" }}>scattered identifiers
+              resolve into a single actor</b>. The immutable <b style={{ color: "var(--violet)" }}>contact
+              key (TOX)</b> binds the accounts, <b style={{ color: "var(--violet)" }}>reuse-breadth</b>
+              strips out the decoy, a rare anchor bridges to a 2nd device and a
+              <b style={{ color: "var(--foreground)" }}> real name</b>, and the name-only impersonation
+              channel is refuted by <b style={{ color: "var(--violet)" }}>stylometry</b>.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+              <b style={{ color: "var(--foreground)" }}>방산 협력사 접근권이 팔린다.</b> 어느 포럼에
+              가상 협력사 hanul-defense의 Citrix·VPN 접근권을 파는 초기접근 브로커(IAB)가 있다.
+              판매자 핸들은 버너, 서포트 계정은 소모품, 판매글엔 <b style={{ color: "var(--foreground)" }}>미끼
+              크리덴셜과 사칭 채널</b>까지 섞여 있다 — 가장 더럽고 어려운 케이스다.
+            </p>
+            <p className="mt-2.5 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+              이 시스템으로 <b style={{ color: "var(--foreground)" }}>흩어진 식별자를 단일 행위자로
+              해소</b>하는 과정을 재생합니다. 안 바뀌는 <b style={{ color: "var(--violet)" }}>연락처(TOX)</b>로
+              계정을 결속하고, <b style={{ color: "var(--violet)" }}>재사용폭</b>으로 미끼를 걷어내고,
+              희소 앵커로 2번째 기기·<b style={{ color: "var(--foreground)" }}>실명</b>까지 잇고, 이름만
+              겹치는 사칭 채널은 <b style={{ color: "var(--violet)" }}>문체</b>로 반증합니다.
+            </p>
+          </>
+        )}
 
         <div className="mt-5 flex items-center gap-2.5">
           <button
@@ -1567,18 +1684,20 @@ function IntroModal({ onRun, onClose }: { onRun: () => void; onClose: () => void
             className="flex-1 rounded-lg py-2.5 text-[13px] font-semibold"
             style={{ background: "var(--violet)", color: "var(--primary-foreground)" }}
           >
-            ▶ 시뮬레이션 실행
+            {en ? "▶ Run simulation" : "▶ 시뮬레이션 실행"}
           </button>
           <button
             onClick={onClose}
             className="rounded-lg px-4 py-2.5 text-[13px] font-medium"
             style={{ background: "var(--muted)", color: "var(--muted-foreground)" }}
           >
-            그냥 둘러보기
+            {en ? "Just explore" : "그냥 둘러보기"}
           </button>
         </div>
         <p className="mt-3 text-[10.5px]" style={{ color: "var(--muted-foreground)" }}>
-          재구성 데이터로 실 엔진(로그-오즈 융합·재사용폭·문체 반증)이 그대로 동작합니다 — 라이브 연결 불필요.
+          {en
+            ? "The real engine (log-odds fusion · reuse-breadth · stylometry refutation) runs on reconstructed data — no live connection required."
+            : "재구성 데이터로 실 엔진(로그-오즈 융합·재사용폭·문체 반증)이 그대로 동작합니다 — 라이브 연결 불필요."}
         </p>
       </div>
     </div>
@@ -1614,6 +1733,7 @@ function QuestPanel({
   ctx,
   configured,
   busy,
+  lang,
   onStart,
   onStop,
   onReplay,
@@ -1624,11 +1744,14 @@ function QuestPanel({
   ctx: QuestCtx;
   configured: boolean;
   busy: boolean;
+  lang: "ko" | "en";
   onStart: (q: Quest) => void;
   onStop: () => void;
   onReplay: (q: Quest) => void;
   replaying: boolean;
 }) {
+  // pick English when present and EN selected, else Korean
+  const tr = (ko: string, en?: string) => (lang === "en" && en ? en : ko);
   return (
     <div className="flex flex-col gap-3 p-3.5">
       <p className="text-[10.5px] leading-relaxed text-[color:var(--muted-foreground)]">
@@ -1661,9 +1784,9 @@ function QuestPanel({
                 <span className="font-mono text-[9px] uppercase tracking-wide" style={{ color: accent }}>
                   {q.tag}
                 </span>
-                <div className="mt-0.5 text-[13px] font-semibold">{q.title}</div>
+                <div className="mt-0.5 text-[13px] font-semibold">{tr(q.title, q.titleEn)}</div>
                 <div className="text-[10.5px] italic leading-snug text-[color:var(--muted-foreground)]">
-                  {q.tagline}
+                  {tr(q.tagline, q.taglineEn)}
                 </div>
               </div>
               {active && (
@@ -1677,7 +1800,7 @@ function QuestPanel({
             </div>
             <div className="px-2.5 pb-2.5">
               <p className="mb-2.5 text-[10.5px] leading-relaxed text-[color:var(--muted-foreground)]">
-                {q.briefing}
+                {tr(q.briefing, q.briefingEn)}
               </p>
               <div className="flex gap-1.5">
                 <button
@@ -1723,11 +1846,17 @@ function QuestPanel({
 // Floating narration bar shown while a recorded investigation replays.
 function ReplayBar({
   replay,
+  lang,
+  onLang,
   onStop,
 }: {
-  replay: { step: number; total: number; move: string; narrate: string };
+  replay: { step: number; total: number; move: string; narrate: string; moveEn?: string; narrateEn?: string };
+  lang: "ko" | "en";
+  onLang: (l: "ko" | "en") => void;
   onStop: () => void;
 }) {
+  const move = lang === "en" && replay.moveEn ? replay.moveEn : replay.move;
+  const narrate = lang === "en" && replay.narrateEn ? replay.narrateEn : replay.narrate;
   return (
     <div
       className="absolute bottom-3 left-1/2 w-[min(560px,calc(100%-24px))] -translate-x-1/2 overflow-hidden rounded-lg border shadow-lg"
@@ -1749,22 +1878,25 @@ function ReplayBar({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px]" style={{ color: "var(--violet)" }}>
-              시뮬레이션 {replay.step + 1}/{replay.total}
+              {lang === "en" ? "SIM" : "시뮬레이션"} {replay.step + 1}/{replay.total}
             </span>
-            <span className="text-[12px] font-semibold">{replay.move}</span>
+            <span className="text-[12px] font-semibold">{move}</span>
           </div>
           <p className="mt-1 text-[11.5px] leading-relaxed text-[color:var(--muted-foreground)]">
-            {replay.narrate}
+            {narrate}
           </p>
         </div>
-        <button
-          onClick={onStop}
-          className="shrink-0 rounded px-2 py-1 text-[11px]"
-          style={{ background: "var(--muted)" }}
-          title="재생 중단"
-        >
-          정지
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <LangToggle lang={lang} onLang={onLang} />
+          <button
+            onClick={onStop}
+            className="rounded px-2 py-1 text-[11px]"
+            style={{ background: "var(--muted)" }}
+            title={lang === "en" ? "Stop replay" : "재생 중단"}
+          >
+            {lang === "en" ? "Stop" : "정지"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1773,15 +1905,18 @@ function ReplayBar({
 function QuestTracker({
   quest,
   ctx,
+  lang,
   onClose,
 }: {
   quest: Quest;
   ctx: QuestCtx;
+  lang: "ko" | "en";
   onClose: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const { done, doneCount, total, complete } = questProgress(quest, ctx, true);
   const accent = complete ? "var(--good)" : "var(--amber)";
+  const tr = (ko: string, en?: string) => (lang === "en" && en ? en : ko);
 
   return (
     <div
@@ -1797,7 +1932,7 @@ function QuestTracker({
       <div className="flex items-center gap-2 px-2.5 py-1.5">
         <span style={{ color: accent, fontSize: 12 }}>⚑</span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[12px] font-semibold">{quest.title}</div>
+          <div className="truncate text-[12px] font-semibold">{tr(quest.title, quest.titleEn)}</div>
         </div>
         <span className="shrink-0 font-mono text-[10px]" style={{ color: accent }}>
           {doneCount}/{total}
