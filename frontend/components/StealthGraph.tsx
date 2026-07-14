@@ -150,6 +150,10 @@ type Quest = {
   seed: string;
   objectives: { id: string; label: string; done: (c: QuestCtx) => boolean }[];
   resolved: string;
+  // offline missions run on canned fixtures through the real fusion engine —
+  // no StealthMole connectivity required, so their buttons aren't gated on
+  // `configured` (the live key being up).
+  offline?: boolean;
 };
 
 // objective predicates over live graph/fire-log state
@@ -166,6 +170,32 @@ const tradedFound = (c: QuestCtx) =>
   c.nodes.some((n) => (n.reuse_factor ?? 1) < 0.6);
 
 const QUESTS: Quest[] = [
+  {
+    id: "shadow-broker",
+    tag: "재구성 · 방산 초기접근 · 오프라인",
+    title: "브로커의 그림자",
+    tagline: "버너 핸들 · 미끼 크리덴셜 · 사칭 채널 — 진짜 판매자는 누구인가?",
+    briefing:
+      "가상 방산 협력사(hanul-defense)의 Citrix·VPN 접근권을 파는 초기접근 브로커(IAB). " +
+      "가장 더러운 케이스다 — 핸들은 버너, 서포트 계정은 소모품, 판매글엔 미끼 크리덴셜과 " +
+      "사칭 채널까지 섞여 있다. 안 바뀌는 TOX 연락키로 계정을 결속하고, CB 재사용폭으로 " +
+      "'널리 거래된 미끼'를 걷어내고, 희소 앵커로 2번째 기기·실명까지 잇고, 이름만 겹치는 " +
+      "사칭 채널은 문체로 반증하라. (실 연결 없이 재구성 데이터로 동작)",
+    seed: "handle:apt_broker",
+    offline: true,
+    objectives: [
+      { id: "infil", label: "침투 — 버너 핸들 시드 (handle:apt_broker)", done: (c) => c.nodes.some((n) => n.type === "handle") },
+      { id: "anchor", label: "결속 — TT로 TOX 앵커 확보(계정 클러스터 점등)", done: (c) => c.nodes.some((n) => n.type === "tox") },
+      { id: "trap", label: "함정 판별 — CB 재사용폭으로 거래재고(미끼) 적발", done: tradedFound },
+      { id: "bridge", label: "브리지 — 희소 앵커로 2번째 감염기기 도달", done: (c) => ipCount(c) >= 2 },
+      { id: "refute", label: "반증 — 사칭 채널에 🔬 문체 비교 실행", done: (c) => c.fireLog.some((f) => f.kind === "compared") },
+      { id: "resolve", label: "해소 — 실체 5개 이상 신뢰 귀속", done: (c) => c.trustedCount >= 5 },
+    ],
+    resolved:
+      "해소 완료 — 버너 핸들·소모품 계정으로 표면은 막혔지만, 안 바뀌는 TOX가 채널을 단일 운영으로 결속. " +
+      "미끼(svc-vpn, CB 9,300 거래재고)는 재사용폭으로 붕괴, 희소 앵커(CB=1)가 2번째 기기·실명 Dmytro Kovalenko로 관통. " +
+      "이름만 빌린 KRAKEN-TEAM(핵티비즘 문체)은 stylometry로 반증. 방산 협력사 접근권 판매자를 실체로 확정(조치).",
+  },
   {
     id: "ghost-trader",
     tag: "실데이터 · 다기기 · Kenya",
@@ -308,6 +338,26 @@ type ReplayAction =
 type ReplayStep = { move: string; narrate: string; action: ReplayAction };
 
 const REPLAYS: Record<string, ReplayStep[]> = {
+  "shadow-broker": [
+    { move: "진입 · 버너 핸들", narrate: "제보: 방산 협력사 hanul-defense의 Citrix·VPN 접근권이 포럼에서 팔린다. 판매자 핸들 @apt_broker 하나뿐 — 버너라 단독으론 벽. 그래도 여기서 시작한다.",
+      action: { kind: "seed", query: "handle:apt_broker" } },
+    { move: "결속 · TT/TOX", narrate: "TT로 이 핸들을 훑자 운영이 드러난다 — 안 바뀌는 연락키 TOX가 본 채널·소모품 서포트 계정을 tox_reuse(0.9·저위조)로 결속. 판매글의 '접근 증명' 파일해시와 타겟 도메인도 함께 걸린다.",
+      action: { kind: "fire", module: "tt", target: "apt_broker" } },
+    { move: "압수 · CDS", narrate: "판매 연락 이메일을 CDS로 되짚으니 감염된 워크스테이션(45.130.88.207)이 통째로 나온다. 그 브라우저에 저장돼 있던 로그인 다수 — 이 중 누가 그의 '신원'이고 누가 그냥 재고인가?",
+      action: { kind: "fire", module: "cds", target: "kraken.access@onionmail.org" } },
+    { move: "함정 · CB(미끼)", narrate: "먼저 눈에 띄는 svc-vpn 계정을 검증. CB=9,300 — 콤보리스트에 도배된 거래 재고다. 수많은 무관한 기기가 똑같이 가진 크리덴셜. 재사용폭 할인으로 이 엣지는 0.9→0.25로 붕괴. 공범처럼 보였지만 미끼.",
+      action: { kind: "fire", module: "cb", target: "svc-vpn@hanul-defense.io" } },
+    { move: "앵커 · CB(희소)", narrate: "대조 검증. 밋밋한 개인 이메일 d.kovalenko88은 CB=1 — 사실상 유일, 어디에도 안 팔린다. 할인 없음. 이게 그를 유일하게 가리키는 진짜 앵커다.",
+      action: { kind: "fire", module: "cb", target: "d.kovalenko88@protonmail.com" } },
+    { move: "브리지 · 실명", narrate: "그 희소 앵커를 CDS로 되짚으니 2번째 감염 기기(개인 노트북 188.72.14.33)로 이어지고, 거기 실명 지메일 dmytro.kovalenko@gmail.com이 있다. 버너 뒤의 실체 — Dmytro Kovalenko.",
+      action: { kind: "fire", module: "cds", target: "d.kovalenko88@protonmail.com" } },
+    { move: "사칭 의심", narrate: "운영자 본 채널을 TT로 되짚어 이걸 사칭·인용하는 계정을 훑는다. 'KRAKEN-TEAM'이 이름 하나로(co_mention·위조 쉬움) 걸린다. 같은 팀? 이름만 빌린 것? 표시이름으로 결속하는 건 성급하다.",
+      action: { kind: "fire", module: "tt", target: "7742119003" } },
+    { move: "반증 · 문체", narrate: "본 채널 vs KRAKEN-TEAM 문체를 🔬 비교. 상업 대량판매(FILE INFORMATION·VIP·Tox ID) vs 웹디페이스 핵티비즘(#OpIsrael·Hacked by·Ganosec) — 완전히 다르다. stylometry raw 0.14 → 링크 붕괴(0.32→0.15). 이름 차용으로 확정, 반증.",
+      action: { kind: "compare", a: "7742119003", b: "KRAKEN_TEAM" } },
+    { move: "해소", narrate: "결론 — 버너·소모품 계정으로 표면은 막혔지만, TOX가 운영을 결속하고, 미끼는 재사용폭으로 걷어냈고, 희소 앵커가 2번째 기기·실명 Dmytro Kovalenko로 관통했다. 사칭 채널은 반증. 방산 접근권 판매자를 실체로 귀속(조치).",
+      action: { kind: "trust", targets: ["apt_broker", "992BBBCBDBE33F42E4E5951ACA0A211114BEE0A47708B39341A8B1F523AAEAB2DBC4579AE2B3", "7742119003", "7742119888", "7742120044", "kraken.access@onionmail.org", "45.130.88.207", "d.kovalenko88@protonmail.com", "188.72.14.33", "dmytro.kovalenko@gmail.com"] } },
+  ],
   "broker-tox": [
     { move: "진입 · TOX", narrate: "핸들 @lockbituser는 삭제됐고 서포트 계정은 전부 소모품(burner). 개인 식별자로는 벽. 하지만 손님이 연락할 TOX 키는 못 바꾼다 — 그 하나를 시드로.",
       action: { kind: "seed", query: "tox:022A7EEB83B648F55DA7A6BEFD130C2156C74F3501A31D853234EC2D18E77A1E48F333F07F9E" } },
@@ -922,7 +972,7 @@ export function StealthGraph() {
         <IntroModal
           onRun={() => {
             setIntroOpen(false);
-            const q = QUESTS.find((x) => x.id === "broker-tox");
+            const q = QUESTS.find((x) => x.id === "shadow-broker");
             if (q) runReplay(q);
           }}
           onClose={() => setIntroOpen(false)}
@@ -1000,7 +1050,8 @@ export function StealthGraph() {
               quests={QUESTS}
               activeQuestId={activeQuestId}
               ctx={questCtx}
-              disabled={!(liveMeta?.configured ?? false) || liveBusy}
+              configured={liveMeta?.configured ?? false}
+              busy={liveBusy}
               onStart={startQuest}
               onStop={() => setActiveQuestId(null)}
               onReplay={runReplay}
@@ -1490,22 +1541,24 @@ function IntroModal({ onRun, onClose }: { onRun: () => void; onClose: () => void
           className="inline-block rounded-full px-2.5 py-1 text-[10.5px] font-semibold tracking-wide"
           style={{ background: "var(--muted)", color: "var(--violet)" }}
         >
-          실데이터 · 텔레그램 · Indonesia
+          재구성 · 방산 초기접근 · 오프라인
         </div>
         <h2 className="mt-3 text-[22px] font-bold" style={{ color: "var(--foreground)" }}>
-          가면 뒤의 브로커
+          브로커의 그림자
         </h2>
 
         <p className="mt-3 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-          <b style={{ color: "var(--foreground)" }}>실제 있었던 사건.</b> 인도네시아 정부·통신의
-          대량 개인정보(통신 3천5백만·SIM등록 13억·선거인단 1억·건강보험 등)를 텔레그램에서
-          판매한 데이터 브로커가 있었다. 이들은 핸들·계정을 끊임없이 갈아치우며 추적을 피했다.
+          <b style={{ color: "var(--foreground)" }}>방산 협력사 접근권이 팔린다.</b> 어느 포럼에
+          가상 협력사 hanul-defense의 Citrix·VPN 접근권을 파는 초기접근 브로커(IAB)가 있다.
+          판매자 핸들은 버너, 서포트 계정은 소모품, 판매글엔 <b style={{ color: "var(--foreground)" }}>미끼
+          크리덴셜과 사칭 채널</b>까지 섞여 있다 — 가장 더럽고 어려운 케이스다.
         </p>
         <p className="mt-2.5 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
           이 시스템으로 <b style={{ color: "var(--foreground)" }}>흩어진 식별자를 단일 행위자로
-          해소</b>하는 과정을 — 실제 StealthMole 라이브 데이터로 — 재생합니다.
-          핸들은 지워도 못 바꾸는 <b style={{ color: "var(--violet)" }}>연락처(TOX)</b> 하나로
-          계정 11개를 잇고, 유포망·정체교체를 관통하고, 이름만 겹치는 링크는 문체로 반증합니다.
+          해소</b>하는 과정을 재생합니다. 안 바뀌는 <b style={{ color: "var(--violet)" }}>연락처(TOX)</b>로
+          계정을 결속하고, <b style={{ color: "var(--violet)" }}>재사용폭</b>으로 미끼를 걷어내고,
+          희소 앵커로 2번째 기기·<b style={{ color: "var(--foreground)" }}>실명</b>까지 잇고, 이름만
+          겹치는 사칭 채널은 <b style={{ color: "var(--violet)" }}>문체</b>로 반증합니다.
         </p>
 
         <div className="mt-5 flex items-center gap-2.5">
@@ -1525,7 +1578,7 @@ function IntroModal({ onRun, onClose }: { onRun: () => void; onClose: () => void
           </button>
         </div>
         <p className="mt-3 text-[10.5px]" style={{ color: "var(--muted-foreground)" }}>
-          재생은 실제 라이브 조회를 수행합니다(공용 데모 쿼터 소량 사용).
+          재구성 데이터로 실 엔진(로그-오즈 융합·재사용폭·문체 반증)이 그대로 동작합니다 — 라이브 연결 불필요.
         </p>
       </div>
     </div>
@@ -1559,7 +1612,8 @@ function QuestPanel({
   quests,
   activeQuestId,
   ctx,
-  disabled,
+  configured,
+  busy,
   onStart,
   onStop,
   onReplay,
@@ -1568,7 +1622,8 @@ function QuestPanel({
   quests: Quest[];
   activeQuestId: string | null;
   ctx: QuestCtx;
-  disabled: boolean;
+  configured: boolean;
+  busy: boolean;
   onStart: (q: Quest) => void;
   onStop: () => void;
   onReplay: (q: Quest) => void;
@@ -1585,6 +1640,8 @@ function QuestPanel({
         const active = activeQuestId === q.id;
         const { doneCount, total, complete } = questProgress(q, ctx, active);
         const accent = complete ? "var(--good)" : "var(--amber)";
+        // offline missions don't need the live key up; live ones do.
+        const qDisabled = busy || replaying || (!q.offline && !configured);
         return (
           <div
             key={q.id}
@@ -1625,7 +1682,7 @@ function QuestPanel({
               <div className="flex gap-1.5">
                 <button
                   onClick={() => onStart(q)}
-                  disabled={disabled || replaying}
+                  disabled={qDisabled}
                   className="flex-1 rounded py-1.5 text-[11px] font-semibold disabled:opacity-40"
                   style={{ background: accent, color: "#0a0c12" }}
                 >
@@ -1645,12 +1702,12 @@ function QuestPanel({
               {REPLAYS[q.id] && (
                 <button
                   onClick={() => onReplay(q)}
-                  disabled={disabled || replaying}
+                  disabled={qDisabled}
                   className="mt-1.5 w-full rounded py-1.5 text-[11px] font-medium disabled:opacity-40"
                   style={{ background: "var(--muted)", color: "var(--violet)", border: "1px solid var(--border-strong)" }}
                   title="분석관의 실제 조사 수순을 자동 재생"
                 >
-                  ▶ 시뮬레이션 재생
+                  ▶ 시뮬레이션 재생{q.offline ? " (오프라인)" : ""}
                 </button>
               )}
             </div>

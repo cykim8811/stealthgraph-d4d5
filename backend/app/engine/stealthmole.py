@@ -36,6 +36,7 @@ import httpx
 import jwt
 
 from app.core.config import settings
+from app.engine import fixtures
 from app.engine.fusion import Observation
 
 HOST = settings.stealthmole_host
@@ -365,7 +366,22 @@ async def _search_async(mod: Module, qtype: str, value: str, limit: int) -> Sear
 
 
 async def search(module_id: str, qtype: str, value: str, limit: int = 5) -> SearchResult:
-    """One query against one module for one identifier (dispatch by mode)."""
+    """One query against one module for one identifier (dispatch by mode).
+
+    Offline demo short-circuit: if a canned fixture exists for this exact
+    (module, type, value) it is returned WITHOUT any network call, so the
+    flagship mission runs with zero StealthMole connectivity. Fixture keys are
+    fabricated identifiers that never collide with a real query, so genuine
+    investigations are unaffected.
+    """
+    fx = fixtures.has_search(module_id, qtype, value)
+    if fx is not None:
+        return SearchResult(
+            module_id=module_id, query=f"{qtype}:{value}",
+            total=int(fx.get("total", 0)), cost=int(fx.get("cost", 0)),
+            records=list(fx.get("records", [])),
+            identifiers=list(fx.get("identifiers", [])),
+        )
     mod = MODULES[module_id]
     if mod.mode == "async":
         return await _search_async(mod, qtype, value, limit)
@@ -476,6 +492,8 @@ _STYLE_MARKERS: dict[str, tuple[str, ...]] = {
                    "buy and download", "ransomhub", "blackcat", "lockbit"),
     "hacktivist": ("defaced", "#opisrael", "indohaxsec", "allahuakbar", "free palestine",
                    "hacked by", "ganosec", "redeye", "opisrael", "#indohaxsec"),
+    "hacktivist_ru": ("we are killnet", "killnet", "killmilk", "usersec", "нато",
+                      "россия", "ддос", "ddos", "anonymous russia", "враг"),
     "carding": ("cvv", "fullz", "dumps+pin", "combolist", "bank logs"),
 }
 
@@ -518,6 +536,9 @@ def _style_profile(text: str, title: str = "") -> dict:
 async def node_style(ref: str) -> dict:
     """Drill a tt node (channel/user) by sha256 and profile its writing —
     content class + script mix. Empty profile if no text (e.g. a bare user)."""
+    fx = fixtures.STYLE.get(ref)
+    if fx is not None:  # offline demo: profile the canned message text
+        return _style_profile(fx.get("text", ""), fx.get("title", ""))
     data = await _get("/tt/node", {"id": ref})
     if not isinstance(data, dict):
         return _style_profile("")
